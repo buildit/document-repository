@@ -15,6 +15,7 @@ import io.searchbox.core.Get;
 import io.searchbox.core.Index;
 import io.searchbox.core.Search;
 import io.searchbox.indices.CreateIndex;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.slf4j.Logger;
@@ -75,6 +76,27 @@ public class DocumentRepository {
         return result.getSourceAsObject(Document.class);
     }
 
+    public List<Document> findAll(String search) throws Exception {
+
+        String safeSearch = StringUtils.replaceAll(search, "\"", "\\\\\"");
+
+        String query = "{\n" +
+                        "  \"query\": {\n" +
+                        "    \"multi_match\" : {\n" +
+                        "      \"query\" : \"" + safeSearch + "\",\n" +
+                        "      \"fields\" : [ \"title^3\", \"content\" ] \n" +
+                        "    }\n" +
+                        "  }\n" +
+                        "}";
+
+        JestResult result = execute(new Search.Builder(query)
+                .addIndex(INDEX_NAME)
+                .build());
+
+        return result.getSourceAsObjectList(Document.class);
+
+    }
+
     public List<Document> findAll() throws Exception {
 
         JestResult result = execute(new Search.Builder("{\"query\" : {\"match_all\" : {}}}")
@@ -82,7 +104,6 @@ public class DocumentRepository {
                 .build());
 
         return result.getSourceAsObjectList(Document.class);
-
     }
 
     private JestResult execute(Action<? extends JestResult> clientRequest){
